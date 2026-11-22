@@ -1,0 +1,971 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#EDF2F2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C191D" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="دفتر الحالات">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>دفتر الحالات</title>
+<style>
+:root{
+  color-scheme:light;
+  --bg:#EDF2F2; --surface:#FFFFFF; --ink:#112A32; --muted:#566E76; --line:#D0DCDD;
+  --primary:#0E5A64; --onp:#FFFFFF; --danger:#B3362D; --ondanger:#FFFFFF;
+  --ok:#1E7B54; --warn:#8F6200; --wa:#25D366; --onwa:#062A18;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    color-scheme:dark;
+    --bg:#0C191D; --surface:#14282E; --ink:#E7F0F1; --muted:#98AFB5; --line:#28434B;
+    --primary:#58BAC7; --onp:#05242A; --danger:#F0897F; --ondanger:#2B0A07;
+    --ok:#5FC795; --warn:#E3B04B;
+  }
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Segoe UI","Noto Sans Arabic","Noto Naskh Arabic",Tahoma,system-ui,-apple-system,sans-serif;
+  font-size:16px;line-height:1.55}
+body.lock{overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+
+.app{max-width:560px;margin:0 auto;min-height:100vh;padding:env(safe-area-inset-top) 16px 170px}
+.top{padding:22px 0 8px}
+.top h1{margin:0;font-size:26px;font-weight:800}
+.warnbar{background:color-mix(in srgb,var(--warn) 16%,var(--surface));color:var(--ink);
+  border-radius:12px;padding:10px 12px;font-size:14px;margin:8px 0}
+
+/* subject tiles */
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{--c:#888;display:flex;align-items:center;min-height:80px;border-radius:20px;overflow:hidden;
+  background:var(--surface);background:color-mix(in srgb,var(--c) 13%,var(--surface));
+  border-inline-start:6px solid var(--c)}
+.tmain{flex:1;min-width:0;display:flex;flex-direction:column;text-align:start;padding:14px 12px;align-self:stretch;justify-content:center}
+.tmain:active{background:color-mix(in srgb,var(--c) 10%,transparent)}
+.tname{font-weight:800;font-size:16px;line-height:1.3}
+.tar{font-size:13px;color:var(--muted)}
+.tadd{flex:none;width:40px;height:40px;margin-inline-end:10px;border-radius:50%;font-size:24px;line-height:1;
+  background:color-mix(in srgb,var(--c) 30%,var(--surface))}
+
+/* lists */
+.h2{font-size:16px;font-weight:700;margin:24px 0 10px;display:flex;justify-content:space-between;align-items:center}
+.h2 button{font-size:14px;color:var(--primary);font-weight:600}
+.list{background:var(--surface);border-radius:16px;overflow:hidden}
+.row{--c:#888;display:flex;width:100%;gap:12px;text-align:start;padding:12px 14px;
+  border-bottom:1px solid var(--line);align-items:stretch}
+.row:last-child{border-bottom:0}
+.row .bar{width:4px;border-radius:2px;background:var(--c);flex:none}
+.rmain{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.rtitle{font-weight:700;overflow-wrap:anywhere}
+.rsub{display:flex;flex-wrap:wrap;gap:0 12px;font-size:13px;color:var(--muted);align-items:center}
+.rsub .sd{display:inline-flex;align-items:center;gap:5px}
+.rsub .sd::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--c)}
+.steps{display:flex;gap:3px;margin-top:6px}
+.steps i{width:24px;height:4px;border-radius:2px;background:color-mix(in srgb,var(--c) 22%,transparent)}
+.steps i.on{background:var(--c)}
+.rside{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none;font-size:12.5px;color:var(--muted)}
+.badge{--s:var(--muted);color:var(--s);background:color-mix(in srgb,var(--s) 14%,var(--surface));
+  padding:1px 10px;border-radius:999px;font-size:12.5px;font-weight:700}
+.st-progress{--s:var(--warn)} .st-done{--s:var(--primary)} .st-signed{--s:var(--ok)}
+.empty{color:var(--muted);text-align:center;padding:28px 12px;margin:0}
+
+/* filters */
+.search input{width:100%;min-height:48px;padding:0 14px;border-radius:14px;border:1.5px solid var(--line);
+  background:var(--surface);appearance:none;-webkit-appearance:none}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px 0 8px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{--c:var(--primary);flex:none;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;
+  border-radius:999px;border:1.5px solid var(--line);background:var(--surface);font-size:14px}
+.chip .dot{width:9px;height:9px;border-radius:50%;background:var(--c)}
+.chip.on{background:color-mix(in srgb,var(--c) 22%,var(--surface));border-color:var(--c);font-weight:700}
+.seg{display:flex;border:1.5px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.seg button{flex:1;min-height:44px;padding:0 6px;font-size:14px}
+.seg button.on{background:var(--primary);color:var(--onp);font-weight:700}
+
+/* settings */
+.btns{display:flex;flex-direction:column;gap:10px}
+.hint{font-size:13px;color:var(--muted);margin:8px 2px}
+
+/* inputs & buttons */
+input,textarea{width:100%;min-height:46px;padding:10px 12px;border:1.5px solid var(--line);border-radius:12px;background:var(--surface)}
+textarea{resize:vertical;min-height:80px}
+.btn{min-height:48px;padding:0 18px;border-radius:14px;font-weight:700;border:1.5px solid var(--line);background:var(--surface);width:100%;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.btn.primary{background:var(--primary);color:var(--onp);border-color:var(--primary)}
+.btn.danger{background:var(--danger);color:var(--ondanger);border-color:var(--danger)}
+.btn.outline-danger{color:var(--danger);border-color:var(--danger)}
+.btn.wa{background:var(--wa);border-color:var(--wa);color:var(--onwa)}
+
+/* dock */
+.dock{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;z-index:20;
+  pointer-events:none;padding-bottom:env(safe-area-inset-bottom)}
+.fabrow{display:flex;justify-content:flex-start;padding:0 16px 12px}
+.fab{pointer-events:auto;min-height:52px;padding:0 22px;border-radius:999px;background:var(--primary);color:var(--onp);
+  font-weight:800;box-shadow:0 4px 14px rgba(5,30,36,.28);display:inline-flex;align-items:center;gap:8px}
+.fab svg{width:20px;height:20px}
+.tabs{pointer-events:auto;display:flex;background:var(--surface);border-top:1px solid var(--line)}
+.tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:9px 0 10px;font-size:12.5px;color:var(--muted)}
+.tabs button.on{color:var(--primary);font-weight:800}
+.tabs svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(5,20,25,.52);z-index:40}
+.sheet{--c:var(--primary);position:fixed;z-index:41;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:560px;
+  max-height:94vh;max-height:94dvh;background:var(--surface);border-radius:24px 24px 0 0;border-top:6px solid var(--c);
+  display:flex;flex-direction:column;animation:up .22s ease-out}
+@keyframes up{from{transform:translate(-50%,28px);opacity:0}to{transform:translate(-50%,0);opacity:1}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 6px}
+.sheet-head h2{margin:0;font-size:20px;font-weight:800}
+.x{width:44px;height:44px;border-radius:50%;font-size:18px;color:var(--muted)}
+.sheet-body{overflow:auto;padding:8px 18px 18px;flex:1;overscroll-behavior:contain}
+.sheet-foot{padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:10px;flex-wrap:wrap}
+.sheet-foot .btn{flex:1 1 0;width:auto}
+.sheet-foot .wide{flex-basis:100%}
+.sheet input,.sheet textarea{background:var(--bg)}
+.field{margin-bottom:18px}
+.field>label,.lbl{display:block;font-size:14px;font-weight:700;margin-bottom:7px}
+.sec{font-size:16px;font-weight:800;margin:6px 0 10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.chipbox{display:flex;flex-wrap:wrap;gap:8px}
+.sheet .chip{background:var(--bg)}
+.sheet .chip.on{background:color-mix(in srgb,var(--c) 22%,var(--surface))}
+.sheet .seg{background:var(--bg)}
+
+/* tooth picker */
+.dseg{margin-bottom:10px}
+.qtabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.qtab{position:relative;min-height:42px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);font-size:12.5px;padding:0 2px}
+.qtab.on{border-color:var(--primary);background:var(--primary);color:var(--onp);font-weight:700}
+.qtab b{position:absolute;top:-7px;inset-inline-start:-4px;min-width:20px;height:20px;border-radius:10px;padding:0 5px;
+  background:var(--ok);color:#fff;font-size:12px;line-height:20px;text-align:center}
+.arch{direction:ltr;display:flex;gap:6px;justify-content:center;margin:12px 0}
+.tooth{flex:1;max-width:46px;height:56px;border:1.5px solid var(--line);background:var(--bg);font-weight:700;font-size:15px}
+.tooth.up{border-radius:18px 18px 8px 8px}
+.tooth.lo{border-radius:8px 8px 18px 18px}
+.tooth.on{background:var(--primary);border-color:var(--primary);color:var(--onp)}
+.tsel{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;align-items:center;margin-bottom:6px}
+.tchip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--primary) 16%,var(--surface));
+  font-weight:700;font-size:14px;direction:ltr}
+.tchip i{font-style:normal;font-size:11px;color:var(--muted)}
+.specials{display:flex;gap:8px;flex-wrap:wrap}
+.specials .chip{min-height:38px;font-size:13.5px}
+
+/* stages (form) */
+.stage{border:1.5px solid var(--line);border-radius:14px;margin-bottom:10px;background:var(--surface);overflow:hidden}
+.stage summary{display:flex;align-items:center;gap:12px;min-height:56px;padding:6px 14px;cursor:pointer;list-style:none}
+.stage summary::-webkit-details-marker{display:none}
+.stage summary::after{content:"";width:8px;height:8px;border-inline-end:2px solid var(--muted);border-bottom:2px solid var(--muted);
+  transform:rotate(45deg);margin:0 4px;flex:none;transition:transform .15s}
+.stage[open] summary::after{transform:rotate(-135deg)}
+.sn{flex:none;width:28px;height:28px;border-radius:50%;text-align:center;line-height:24px;font-size:13px;font-weight:800;
+  border:2px solid var(--c);background:color-mix(in srgb,var(--c) 26%,var(--surface))}
+.stt{flex:1;display:flex;flex-direction:column;line-height:1.3}
+.stt small{color:var(--muted);font-size:12.5px}
+.sind{flex:none;width:10px;height:10px;border-radius:50%;background:var(--line)}
+.sind.on{background:var(--ok)}
+.stbody{padding:4px 14px 14px;display:flex;flex-direction:column;gap:12px}
+
+/* photos */
+.photos{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ph{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--bg)}
+.ph img{width:100%;height:100%;object-fit:cover;display:block}
+.ph .phx{position:absolute;top:3px;inset-inline-start:3px;width:28px;height:28px;border-radius:50%;background:rgba(0,0,0,.6);color:#fff;font-size:12px}
+.ph.add{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;border:1.5px dashed var(--line);
+  color:var(--muted);font-size:11.5px;cursor:pointer}
+.ph.add b{font-size:24px;font-weight:400;line-height:1;color:var(--primary)}
+.ph.view{padding:0;width:100%}
+
+/* detail */
+.dl{margin:0}
+.dl>div{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--line)}
+.dl dt{width:92px;flex:none;color:var(--muted);font-size:14px}
+.dl dd{margin:0;flex:1;overflow-wrap:anywhere;white-space:pre-wrap}
+.tl{list-style:none;margin:20px 0 0;padding:0}
+.ts{position:relative;padding-inline-start:38px;padding-bottom:22px}
+.ts::after{content:"";position:absolute;inset-inline-start:13px;top:30px;bottom:2px;width:2px;background:color-mix(in srgb,var(--c) 32%,transparent)}
+.ts:last-child{padding-bottom:4px}
+.ts:last-child::after{display:none}
+.tdot{position:absolute;inset-inline-start:0;top:0;width:28px;height:28px;border-radius:50%;text-align:center;line-height:24px;font-size:13px;font-weight:800;
+  border:2px solid var(--c);background:color-mix(in srgb,var(--c) 26%,var(--surface))}
+.ts h3{margin:2px 0 4px;font-size:15.5px;font-weight:800}
+.ts h3 span{font-weight:400;font-size:13px;color:var(--muted);margin-inline-start:6px}
+.tnote{margin:0 0 8px;white-space:pre-wrap;overflow-wrap:anywhere}
+.ts.none h3{opacity:.55}
+.ts.none .tnote{color:var(--muted);font-size:13.5px}
+
+/* confirm, share, viewer, toast */
+.confirm{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:20px}
+.confirm .scrim{z-index:0}
+.cbox{position:relative;z-index:1;background:var(--surface);border-radius:20px;padding:20px;width:100%;max-width:380px}
+.cbox h3{margin:0 0 14px;font-size:18px}
+.cbox p{margin:0 0 16px;font-weight:600}
+.crow{display:flex;gap:10px}
+.cstack{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.chk{display:flex;gap:12px;align-items:center;margin:0 0 12px;font-weight:500;cursor:pointer}
+.chk input{flex:none;width:22px;height:22px;min-height:0;padding:0;accent-color:var(--primary)}
+.viewer{position:fixed;inset:0;z-index:55;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;padding:12px}
+.viewer img{max-width:100%;max-height:100%;border-radius:8px}
+#toast{position:fixed;left:50%;bottom:calc(110px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;opacity:0;transition:opacity .2s,transform .2s;
+  pointer-events:none;z-index:60;font-size:14px;max-width:90%;text-align:center}
+#toast.on{opacity:1;transform:translateX(-50%)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top"><h1>دفتر الحالات</h1></header>
+  <div id="banner"></div>
+  <main id="main"></main>
+</div>
+
+<div class="dock">
+  <div class="fabrow">
+    <button class="fab" data-act="new">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      حالة جديدة
+    </button>
+  </div>
+  <nav class="tabs" aria-label="التنقل">
+    <button data-act="nav" data-v="home"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10"/></svg>الرئيسية</button>
+    <button data-act="nav" data-v="cases"><svg viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>الحالات</button>
+    <button data-act="nav" data-v="settings"><svg viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>الإعدادات</button>
+  </nav>
+</div>
+
+<div id="sheetRoot"></div>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+
+/* ---------- Data definitions ---------- */
+const SUBJECTS = [
+  {id:'Operative', ar:'ترميمات', color:'#2F7FB5',
+   procs:['Class I','Class II','Class III','Class IV','Class V','Amalgam','Glass ionomer','Core build-up','Direct veneer']},
+  {id:'Fixed', ar:'تركيبات ثابتة', color:'#7B5CC4',
+   procs:['Crown – PFM','Crown – Zirconia','Crown – Metal','Bridge','Post & core','Veneer','Inlay / Onlay']},
+  {id:'Implant', ar:'زراعة الأسنان', color:'#4A6572',
+   procs:['Implant placement','Second stage','Implant crown','Implant overdenture','Bone graft','Sinus lift']},
+  {id:'Endo', ar:'علاج الجذور', color:'#D2542F',
+   procs:['RCT – Anterior','RCT – Premolar','RCT – Molar','Retreatment','Access opening','Post-endo restoration']},
+  {id:'Perio', ar:'أمراض اللثة', color:'#D2587A',
+   procs:['Scaling & polishing','Full-mouth scaling','Root planing (SRP)','Gingivectomy','Crown lengthening','Flap surgery','Perio charting','OHI']},
+  {id:'Pedo', ar:'أسنان الأطفال', color:'#D9A21B',
+   procs:['Pulpotomy','Pulpectomy','Stainless steel crown','Composite','Space maintainer','Fissure sealant','Fluoride varnish','Extraction']},
+  {id:'Surgery', ar:'جراحة الفم', color:'#238B5F',
+   procs:['Simple extraction','Surgical extraction','Impaction','Abscess drainage','Biopsy','Alveoloplasty','Frenectomy','Suturing']},
+  {id:'Removable', ar:'تركيبات متحركة', color:'#A8693F',
+   procs:['Complete denture','Partial – Acrylic','Partial – Cobalt-chrome','Immediate denture','Overdenture','Reline / Rebase','Denture repair']}
+];
+const STAGES = [
+  {k:'pre',    en:'Pre-operative',    ar:'قبل الإجراء',  ph:'الشكوى، التشخيص، الفحص الإكلينيكي…'},
+  {k:'xray',   en:'X-ray',            ar:'الأشعة',       ph:'نوع الأشعة (PA / Bitewing / CBCT…) وما ظهر فيها'},
+  {k:'during', en:'During procedure', ar:'أثناء الإجراء', ph:'الخطوات والمواد المستخدمة…'},
+  {k:'post',   en:'Post-operative',   ar:'بعد الإجراء',  ph:'النتيجة، التعليمات، موعد المتابعة…'}
+];
+const STATUS = {progress:{label:'جاري'}, done:{label:'مكتمل'}, signed:{label:'موقّع'}};
+const GENDER = {m:'ذكر', f:'أنثى'};
+const PERM = [
+  {id:'UR', ar:'علوي أيمن', up:true,  teeth:[18,17,16,15,14,13,12,11]},
+  {id:'UL', ar:'علوي أيسر', up:true,  teeth:[21,22,23,24,25,26,27,28]},
+  {id:'LL', ar:'سفلي أيسر', up:false, teeth:[31,32,33,34,35,36,37,38]},
+  {id:'LR', ar:'سفلي أيمن', up:false, teeth:[48,47,46,45,44,43,42,41]}
+];
+const PRIM = [
+  {id:'pUR', ar:'علوي أيمن', up:true,  teeth:[55,54,53,52,51]},
+  {id:'pUL', ar:'علوي أيسر', up:true,  teeth:[61,62,63,64,65]},
+  {id:'pLL', ar:'سفلي أيسر', up:false, teeth:[71,72,73,74,75]},
+  {id:'pLR', ar:'سفلي أيمن', up:false, teeth:[85,84,83,82,81]}
+];
+const SPECIAL = ['Upper arch','Lower arch','Full mouth'];
+const KEY_CASES = 'cases-v1';
+const MAX_PHOTOS = 4; // per stage
+
+/* ---------- Helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const fmtDate = d => d ? d.split('-').reverse().join('/') : '';
+const subj = id => SUBJECTS.find(s => s.id === id) || SUBJECTS[0];
+const sortTeeth = a => [...a].sort((x, y) => {
+  const nx = parseInt(x, 10), ny = parseInt(y, 10);
+  if (isNaN(nx) && isNaN(ny)) return 0; if (isNaN(nx)) return 1; if (isNaN(ny)) return -1; return nx - ny;
+});
+const teethHTML = t => (t && t.length) ? `<span dir="ltr">${esc(sortTeeth(t).join(', '))}</span>` : '';
+
+let toastTimer;
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2600);
+}
+
+/* ---------- Storage (Claude storage → IndexedDB → localStorage → memory) ---------- */
+const mem = {};
+let _db = null;
+function idb(){
+  if (_db) return _db;
+  _db = new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error('no indexedDB'));
+    const r = indexedDB.open('dental-case-log', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+  return _db;
+}
+function idbReq(mode, fn){
+  return idb().then(db => new Promise((res, rej) => {
+    const tx = db.transaction('kv', mode), rq = fn(tx.objectStore('kv'));
+    tx.oncomplete = () => res(rq ? rq.result : undefined);
+    tx.onerror = tx.onabort = () => rej(tx.error);
+  }));
+}
+async function sGet(k){
+  if (window.storage) {
+    try { const r = await window.storage.get(k, false); return r && r.value ? JSON.parse(r.value) : null; }
+    catch (e) { return null; }
+  }
+  try { const v = await idbReq('readonly', st => st.get(k)); if (v !== undefined) return v; } catch (e) {}
+  try { const v = window.localStorage.getItem(k); if (v != null) return JSON.parse(v); } catch (e) {}
+  return k in mem ? mem[k] : null;
+}
+async function sSet(k, v){
+  mem[k] = v;
+  if (window.storage) { try { const r = await window.storage.set(k, JSON.stringify(v), false); return !!r; } catch (e) { return false; } }
+  try { await idbReq('readwrite', st => st.put(v, k)); return true; } catch (e) {}
+  try { window.localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; }
+}
+async function sDel(k){
+  delete mem[k];
+  if (window.storage) { try { await window.storage.delete(k, false); } catch (e) {} return; }
+  try { await idbReq('readwrite', st => st.delete(k)); } catch (e) {}
+  try { window.localStorage.removeItem(k); } catch (e) {}
+}
+
+/* ---------- State ---------- */
+const S = { cases: [], view: 'home', fSubject: 'all', fStatus: 'all', q: '', ready: false, storageOK: true };
+let draft = null;
+let detailPhotos = {};
+let installEvt = null;
+const isStandalone = () => (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; if (S.view === 'settings' && S.ready) render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; if (S.view === 'settings' && S.ready) render(); });
+
+const sortCases = a => [...a].sort((x, y) => (y.date || '').localeCompare(x.date || '') || (y.createdAt || 0) - (x.createdAt || 0));
+
+/* make sure every case has the 4 stages (also upgrades older saved cases) */
+function normalize(c){
+  const st = c.stages || {}, out = {};
+  STAGES.forEach(s => { const x = st[s.k] || {}; out[s.k] = {notes: x.notes || '', n: x.n || 0}; });
+  if (!c.stages && c.photoCount) out.during.n = c.photoCount;
+  c.stages = out; delete c.photoCount;
+  return c;
+}
+const stageFilled = (c, k) => { const s = c.stages && c.stages[k]; return !!s && (String(s.notes || '').trim() !== '' || s.n > 0); };
+
+async function getStagePhotos(id, k){
+  const p = await sGet('ph-' + id + '-' + k);
+  if (Array.isArray(p)) return p;
+  if (k === 'during') { const old = await sGet('photos-' + id); if (Array.isArray(old)) return old; }
+  return [];
+}
+async function dropPhotos(id){
+  for (const s of STAGES) await sDel('ph-' + id + '-' + s.k);
+  await sDel('photos-' + id);
+}
+async function persistCases(){
+  const ok = await sSet(KEY_CASES, S.cases);
+  if (!ok) { S.storageOK = false; renderBanner(); }
+  return ok;
+}
+
+/* ---------- Views ---------- */
+function rowHTML(c){
+  const sb = subj(c.subject), st = STATUS[c.status] || STATUS.done;
+  const sub = [`<span class="sd">${esc(sb.id)}</span>`];
+  if (c.teeth && c.teeth.length) sub.push(teethHTML(c.teeth));
+  if (c.patient) sub.push(`<span>${esc(c.patient)}</span>`);
+  const steps = STAGES.map(s => `<i class="${stageFilled(c, s.k) ? 'on' : ''}"></i>`).join('');
+  return `<button class="row" style="--c:${sb.color}" data-act="open-case" data-id="${esc(c.id)}">
+    <span class="bar"></span>
+    <span class="rmain"><span class="rtitle">${esc(c.procedure || sb.id)}</span><span class="rsub">${sub.join('')}</span><span class="steps" aria-hidden="true">${steps}</span></span>
+    <span class="rside"><span class="badge st-${c.status}">${st.label}</span><span>${fmtDate(c.date)}</span></span>
+  </button>`;
+}
+
+const EMPTY_ALL = '<p class="empty">لم تسجّل أي حالة بعد.<br>اضغط «حالة جديدة» لتسجيل أول حالة.</p>';
+
+function homeHTML(){
+  const tiles = SUBJECTS.map(s => `<div class="tile" style="--c:${s.color}">
+      <button class="tmain" data-act="open-subject" data-v="${s.id}"><span class="tname">${s.id}</span><span class="tar">${s.ar}</span></button>
+      <button class="tadd" data-act="new-in" data-v="${s.id}" aria-label="حالة جديدة في ${s.id}">+</button>
+    </div>`).join('');
+  const recent = sortCases(S.cases).slice(0, 5);
+  return `<h2 class="h2" style="margin-top:8px">المواد</h2>
+    <div class="tiles">${tiles}</div>
+    <h2 class="h2">آخر الحالات ${S.cases.length > 5 ? '<button data-act="nav" data-v="cases">عرض الكل</button>' : ''}</h2>
+    ${recent.length ? `<div class="list">${recent.map(rowHTML).join('')}</div>` : EMPTY_ALL}`;
+}
+
+function filtered(){
+  const q = S.q.trim().toLowerCase();
+  return sortCases(S.cases).filter(c =>
+    (S.fSubject === 'all' || c.subject === S.fSubject) &&
+    (S.fStatus === 'all' || c.status === S.fStatus) &&
+    (!q || [c.patient, c.fileNo, c.procedure, c.doctor, c.notes, (c.teeth || []).join(' '), c.subject,
+            ...STAGES.map(s => c.stages[s.k].notes)].join(' ').toLowerCase().includes(q))
+  );
+}
+function listHTML(){
+  if (!S.cases.length) return EMPTY_ALL;
+  const items = filtered();
+  if (!items.length) return '<p class="empty">لا توجد حالات مطابقة.</p>';
+  return `<div class="list">${items.map(rowHTML).join('')}</div>`;
+}
+function casesHTML(){
+  const chip = (id, label, color) => `<button class="chip ${S.fSubject === id ? 'on' : ''}" style="--c:${color || 'var(--primary)'}" data-act="filter-subject" data-v="${id}">${color ? '<span class="dot"></span>' : ''}${label}</button>`;
+  const stBtn = (id, label) => `<button class="${S.fStatus === id ? 'on' : ''}" data-act="filter-status" data-v="${id}">${label}</button>`;
+  return `<div class="search"><input id="q" type="search" placeholder="ابحث بالمريض أو الإجراء أو رقم السن" value="${esc(S.q)}" autocomplete="off"></div>
+    <div class="chips">${chip('all', 'الكل')}${SUBJECTS.map(s => chip(s.id, s.id, s.color)).join('')}</div>
+    <div class="seg">${stBtn('all', 'الكل')}${stBtn('progress', 'جاري')}${stBtn('done', 'مكتمل')}${stBtn('signed', 'موقّع')}</div>
+    <div id="caseList" style="margin-top:12px">${listHTML()}</div>`;
+}
+function settingsHTML(){
+  const install = isStandalone() ? '' : `<h2 class="h2" style="margin-top:8px">تثبيت التطبيق</h2>
+    ${installEvt ? '<button class="btn primary" data-act="install">تثبيت على الهاتف</button>' : ''}
+    <p class="hint">Android: من قائمة Chrome اختر «تثبيت التطبيق». iPhone: من Safari اضغط مشاركة ثم «إضافة إلى الشاشة الرئيسية».</p>`;
+  return `${install}<h2 class="h2" ${install ? '' : 'style="margin-top:8px"'}>المشاركة على واتساب</h2>
+    <p class="hint" style="margin-top:0">افتح أي حالة واضغط «مشاركة على واتساب». يمكنك إخفاء اسم المريض ورقم الملف قبل الإرسال.</p>
+    <h2 class="h2">نسخة احتياطية كاملة (مع الصور)</h2>
+    <div class="btns">
+      <button class="btn" data-act="backup">حفظ نسخة احتياطية</button>
+      <label class="btn" style="cursor:pointer">استرجاع نسخة احتياطية<input type="file" accept="application/json,.json" hidden id="restoreIn"></label>
+    </div>
+    <p class="hint">احتفظ بنسخة من وقت لآخر، فمسح بيانات المتصفح أو حذف التطبيق يمسح الحالات.</p>
+    <h2 class="h2">تصدير إلى Excel</h2>
+    <div class="btns">
+      <button class="btn" data-act="export">تحميل ملف Excel (CSV)</button>
+      <button class="btn" data-act="copy">نسخ الجدول</button>
+    </div>
+    <p class="hint">لو التحميل لا يعمل في متصفحك، استخدم «نسخ الجدول» ثم الصقه في Excel أو Google Sheets.</p>
+    <h2 class="h2">حذف كل البيانات</h2>
+    <button class="btn outline-danger" data-act="wipe">حذف كل الحالات</button>
+    <p class="hint">يُفضّل كتابة اختصار اسم المريض أو رقم الملف بدلًا من الاسم الكامل.</p>`;
+}
+
+function renderBanner(){
+  $('#banner').innerHTML = S.storageOK ? '' :
+    '<div class="warnbar">التخزين غير متاح هنا (ربما بسبب التصفح الخاص)، وستُفقد الحالات عند إغلاق الصفحة. احفظ نسخة احتياطية من الإعدادات.</div>';
+}
+function render(){
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.v === S.view));
+  document.querySelector('.fabrow').style.display = S.view === 'settings' ? 'none' : 'flex';
+  renderBanner();
+  const m = $('#main');
+  if (!S.ready) { m.innerHTML = '<p class="empty">جارٍ التحميل…</p>'; return; }
+  m.innerHTML = S.view === 'home' ? homeHTML() : S.view === 'cases' ? casesHTML() : settingsHTML();
+}
+
+/* ---------- Sheets & dialogs ---------- */
+function openSheet(html, cls){
+  $('#sheetRoot').innerHTML = `<div class="scrim" ${cls === 'form' ? '' : 'data-act="close-sheet"'}></div><div class="sheet ${cls || ''}" role="dialog" aria-modal="true">${html}</div>`;
+  document.body.classList.add('lock');
+}
+function closeSheet(){
+  $('#sheetRoot').innerHTML = ''; document.body.classList.remove('lock'); draft = null; detailPhotos = {};
+}
+function confirmBox(msg, yesLabel, onYes){
+  const el = document.createElement('div'); el.className = 'confirm';
+  el.innerHTML = `<div class="scrim"></div><div class="cbox"><p>${esc(msg)}</p><div class="crow"><button class="btn" data-c="no">إلغاء</button><button class="btn danger" data-c="yes">${esc(yesLabel)}</button></div></div>`;
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-c]'); if (!b) return;
+    if (b.dataset.c === 'yes') onYes();
+    el.remove();
+  });
+  document.body.appendChild(el);
+}
+
+/* ----- Form ----- */
+function lastDoctor(sub){
+  const c = sortCases(S.cases).find(x => x.subject === sub && x.doctor);
+  return c ? c.doctor : '';
+}
+function openForm(c, presetSub){
+  const preset = presetSub || ((S.view === 'cases' && S.fSubject !== 'all') ? S.fSubject : 'Operative');
+  const stages = {};
+  STAGES.forEach(s => {
+    const x = c ? c.stages[s.k] : {notes: '', n: 0};
+    stages[s.k] = {notes: x.notes || '', n: x.n || 0, photos: [], loaded: !c || !x.n};
+  });
+  if (c) {
+    const prim = (c.teeth || []).some(t => { const n = parseInt(t, 10); return n >= 51 && n <= 85; });
+    const sb = subj(c.subject);
+    draft = Object.assign({}, c, {
+      stages, teeth: [...(c.teeth || [])], doctorTouched: true,
+      procMode: (c.procedure && !sb.procs.includes(c.procedure)) ? 'other' : 'preset',
+      dentition: prim ? 'primary' : 'permanent', quad: null
+    });
+  } else {
+    draft = {
+      id: null, subject: preset, procedure: '', procMode: 'preset', teeth: [], patient: '', fileNo: '', age: '', gender: '',
+      date: today(), doctor: lastDoctor(preset), doctorTouched: false, status: 'done', notes: '',
+      stages, dentition: preset === 'Pedo' ? 'primary' : 'permanent', quad: null
+    };
+  }
+  openSheet(formHTML(), 'form');
+  fillForm();
+  if (c) {
+    STAGES.forEach(s => {
+      if (!c.stages[s.k].n) return;
+      getStagePhotos(c.id, s.k).then(arr => {
+        if (!draft || draft.id !== c.id) return;
+        const st = draft.stages[s.k]; st.photos = [...arr, ...st.photos]; st.loaded = true; renderStage(s.k);
+      });
+    });
+  }
+}
+function formHTML(){
+  const stagesHTML = STAGES.map((s, i) => `<details class="stage" id="st-${s.k}">
+      <summary><span class="sn">${i + 1}</span><span class="stt"><b>${s.en}</b><small>${s.ar}</small></span><span class="sind" id="ind-${s.k}"></span></summary>
+      <div class="stbody">
+        <textarea data-st="${s.k}" rows="3" placeholder="${esc(s.ph)}"></textarea>
+        <div class="photos" id="pb-${s.k}"></div>
+      </div>
+    </details>`).join('');
+  return `<div class="sheet-head"><h2>${draft.id ? 'تعديل الحالة' : 'حالة جديدة'}</h2><button class="x" data-act="close-sheet" aria-label="إغلاق">✕</button></div>
+  <div class="sheet-body">
+    <div class="field"><span class="lbl">المادة</span><div class="chipbox" id="subjBox"></div></div>
+    <div class="field"><span class="lbl">الإجراء</span><div id="procBox"></div></div>
+    <div class="field"><span class="lbl">الأسنان</span><div id="teethBox"></div></div>
+    <div class="grid2">
+      <div class="field"><label for="f-patient">المريض</label><input id="f-patient" data-f="patient" placeholder="الاسم أو الاختصار" autocomplete="off"></div>
+      <div class="field"><label for="f-fileNo">رقم الملف</label><input id="f-fileNo" data-f="fileNo" autocomplete="off"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="f-age">العمر</label><input id="f-age" data-f="age" type="number" min="0" max="120" inputmode="numeric"></div>
+      <div class="field"><span class="lbl">النوع</span><div class="seg" id="genderBox"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label for="f-date">التاريخ</label><input id="f-date" data-f="date" type="date"></div>
+      <div class="field"><label for="f-doctor">الدكتور المشرف</label><input id="f-doctor" data-f="doctor" autocomplete="off"></div>
+    </div>
+    <div class="field"><span class="lbl">حالة الحالة</span><div class="seg" id="statusBox"></div></div>
+    <div class="sec">مراحل الحالة</div>
+    ${stagesHTML}
+    <div class="field" style="margin-top:18px"><label for="f-notes">ملاحظات عامة (اختياري)</label><textarea id="f-notes" data-f="notes" rows="2"></textarea></div>
+  </div>
+  <div class="sheet-foot"><button class="btn primary" data-act="save">حفظ الحالة</button></div>`;
+}
+function fillForm(){
+  ['patient','fileNo','age','date','doctor','notes'].forEach(k => { const el = $('#f-' + k); if (el) el.value = draft[k] || ''; });
+  STAGES.forEach(s => {
+    const ta = document.querySelector(`[data-st="${s.k}"]`); ta.value = draft.stages[s.k].notes;
+    const d = $('#st-' + s.k);
+    d.open = (!draft.id && s.k === 'pre') || !!draft.stages[s.k].notes.trim() || draft.stages[s.k].n > 0;
+    renderStage(s.k);
+  });
+  renderSubj(); renderProcs(); renderTeeth(); renderGender(); renderStatus();
+  applySubjectColor();
+}
+function applySubjectColor(){
+  const sh = $('#sheetRoot .sheet'); if (sh) sh.style.setProperty('--c', subj(draft.subject).color);
+}
+function renderSubj(){
+  $('#subjBox').innerHTML = SUBJECTS.map(s => `<button class="chip ${draft.subject === s.id ? 'on' : ''}" style="--c:${s.color}" data-act="f-subject" data-v="${s.id}"><span class="dot"></span>${s.id}</button>`).join('');
+}
+function renderProcs(){
+  const sb = subj(draft.subject), other = draft.procMode === 'other';
+  $('#procBox').innerHTML = `<div class="chipbox">
+    ${sb.procs.map(p => `<button class="chip ${(!other && draft.procedure === p) ? 'on' : ''}" data-act="f-proc" data-v="${esc(p)}">${esc(p)}</button>`).join('')}
+    <button class="chip ${other ? 'on' : ''}" data-act="f-proc-other">أخرى…</button></div>
+    ${other ? '<input id="f-procedure" data-f="procedure" placeholder="اكتب اسم الإجراء" style="margin-top:10px" autocomplete="off">' : ''}`;
+  if (other) $('#f-procedure').value = draft.procedure || '';
+}
+function renderTeeth(){
+  const t = draft.teeth, prim = draft.dentition === 'primary', quads = prim ? PRIM : PERM;
+  if (!quads.find(q => q.id === draft.quad)) draft.quad = quads[0].id;
+  const q = quads.find(x => x.id === draft.quad);
+  const sel = t.length ? sortTeeth(t).map(x => `<button class="tchip" data-act="tooth-toggle" data-v="${esc(x)}">${esc(x)} <i>✕</i></button>`).join('')
+    : '<span class="hint" style="margin:0">اختر الأسنان من الرسم (اختياري)</span>';
+  const tabs = quads.map(x => {
+    const n = x.teeth.filter(y => t.includes(String(y))).length;
+    return `<button class="qtab ${x.id === draft.quad ? 'on' : ''}" data-act="tooth-quad" data-v="${x.id}">${x.ar}${n ? `<b>${n}</b>` : ''}</button>`;
+  }).join('');
+  const teeth = q.teeth.map(x => `<button class="tooth ${q.up ? 'up' : 'lo'} ${t.includes(String(x)) ? 'on' : ''}" data-act="tooth-toggle" data-v="${x}" aria-pressed="${t.includes(String(x))}">${x}</button>`).join('');
+  const specials = SPECIAL.map(x => `<button class="chip ${t.includes(x) ? 'on' : ''}" data-act="tooth-toggle" data-v="${x}">${x}</button>`).join('');
+  $('#teethBox').innerHTML = `
+    <div class="seg dseg"><button class="${!prim ? 'on' : ''}" data-act="dentition" data-v="permanent">أسنان دائمة</button><button class="${prim ? 'on' : ''}" data-act="dentition" data-v="primary">أسنان لبنية</button></div>
+    <div class="tsel">${sel}</div>
+    <div class="qtabs">${tabs}</div>
+    <div class="arch">${teeth}</div>
+    <div class="specials">${specials}</div>`;
+}
+function renderGender(){
+  $('#genderBox').innerHTML = Object.entries(GENDER).map(([k, l]) => `<button class="${draft.gender === k ? 'on' : ''}" data-act="f-gender" data-v="${k}">${l}</button>`).join('');
+}
+function renderStatus(){
+  $('#statusBox').innerHTML = Object.entries(STATUS).map(([k, v]) => `<button class="${draft.status === k ? 'on' : ''}" data-act="f-status" data-v="${k}">${v.label}</button>`).join('');
+}
+function updateInd(k){
+  const st = draft.stages[k];
+  const on = st.notes.trim() !== '' || st.photos.length > 0 || (!st.loaded && st.n > 0);
+  const el = $('#ind-' + k); if (el) el.classList.toggle('on', on);
+}
+function renderStage(k){
+  const ph = draft.stages[k].photos;
+  $('#pb-' + k).innerHTML = ph.map((p, i) => `<div class="ph"><img src="${p}" alt=""><button class="phx" data-act="rm-photo" data-v="${k}:${i}" aria-label="حذف الصورة">✕</button></div>`).join('') +
+    (ph.length < MAX_PHOTOS ? `<label class="ph add"><b>+</b><span>صورة</span><input type="file" accept="image/*" multiple hidden data-photo="${k}"></label>` : '');
+  updateInd(k);
+}
+
+function compress(file){
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 800, k = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * k), h = Math.round(img.height * k);
+        const cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        res(cv.toDataURL('image/jpeg', 0.62));
+      };
+      img.onerror = rej; img.src = fr.result;
+    };
+    fr.onerror = rej; fr.readAsDataURL(file);
+  });
+}
+async function addPhotos(k, files){
+  if (!draft) return;
+  for (const f of Array.from(files)) {
+    const st = draft.stages[k];
+    if (st.photos.length >= MAX_PHOTOS) { toast('الحد الأقصى ' + MAX_PHOTOS + ' صور لكل مرحلة'); break; }
+    try { st.photos.push(await compress(f)); } catch (e) { toast('تعذّر قراءة الصورة'); }
+  }
+  if (draft) renderStage(k);
+}
+
+async function saveDraft(){
+  const d = draft;
+  if (!String(d.procedure || '').trim()) { toast('اختر الإجراء أو اكتبه'); return; }
+  const id = d.id || uid();
+  const stages = {};
+  STAGES.forEach(s => {
+    const st = d.stages[s.k];
+    stages[s.k] = {notes: (st.notes || '').trim(), n: st.loaded ? st.photos.length : st.n};
+  });
+  const rec = {
+    id, subject: d.subject, procedure: d.procedure.trim(), teeth: sortTeeth(d.teeth),
+    patient: (d.patient || '').trim(), fileNo: (d.fileNo || '').trim(), age: d.age, gender: d.gender,
+    date: d.date || today(), doctor: (d.doctor || '').trim(), status: d.status, notes: (d.notes || '').trim(),
+    stages, createdAt: d.createdAt || Date.now()
+  };
+  const i = S.cases.findIndex(x => x.id === id);
+  if (i >= 0) S.cases[i] = rec; else S.cases.push(rec);
+  let photoOK = true;
+  for (const s of STAGES) {
+    const st = d.stages[s.k]; if (!st.loaded) continue;
+    if (st.photos.length) { if (!(await sSet('ph-' + id + '-' + s.k, st.photos))) photoOK = false; }
+    else await sDel('ph-' + id + '-' + s.k);
+  }
+  if (d.stages.during.loaded) await sDel('photos-' + id);
+  await persistCases();
+  closeSheet(); render();
+  toast(photoOK ? 'تم حفظ الحالة' : 'تم حفظ الحالة، لكن تعذّر حفظ بعض الصور');
+}
+
+/* ----- Detail ----- */
+function detailHTML(c){
+  const sb = subj(c.subject);
+  const rows = [
+    ['المادة', `${esc(sb.id)} – ${esc(sb.ar)}`],
+    ['الأسنان', teethHTML(c.teeth)],
+    ['المريض', esc(c.patient)],
+    ['رقم الملف', esc(c.fileNo)],
+    ['العمر / النوع', [c.age ? esc(c.age) + ' سنة' : '', GENDER[c.gender] || ''].filter(Boolean).join(' – ')],
+    ['التاريخ', `<span dir="ltr">${fmtDate(c.date)}</span>`],
+    ['الدكتور', esc(c.doctor)],
+    ['ملاحظات', esc(c.notes)]
+  ].filter(r => r[1]);
+  const seg = Object.entries(STATUS).map(([k, v]) => `<button class="${c.status === k ? 'on' : ''}" data-act="quick-status" data-v="${k}" data-id="${esc(c.id)}">${v.label}</button>`).join('');
+  const tl = STAGES.map((s, i) => {
+    const st = c.stages[s.k], notes = (st.notes || '').trim(), filled = stageFilled(c, s.k);
+    return `<li class="ts ${filled ? '' : 'none'}"><span class="tdot">${i + 1}</span>
+      <h3>${s.en}<span>${s.ar}</span></h3>
+      ${notes ? `<p class="tnote">${esc(notes)}</p>` : ''}
+      ${st.n ? `<div class="photos" id="dp-${s.k}"></div>` : ''}
+      ${filled ? '' : '<p class="tnote">لم يُضف شيء بعد</p>'}
+    </li>`;
+  }).join('');
+  return `<div class="sheet-head"><h2>${esc(c.procedure)}</h2><button class="x" data-act="close-sheet" aria-label="إغلاق">✕</button></div>
+  <div class="sheet-body">
+    <div class="field"><span class="lbl">حالة الحالة</span><div class="seg">${seg}</div></div>
+    <dl class="dl">${rows.map(r => `<div><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`).join('')}</dl>
+    <ol class="tl">${tl}</ol>
+  </div>
+  <div class="sheet-foot">
+    <button class="btn wa wide" data-act="share" data-id="${esc(c.id)}"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 20l1.2-5.4A8.5 8.5 0 1 1 21 11.5z"/></svg>مشاركة على واتساب</button>
+    <button class="btn primary" data-act="edit-case" data-id="${esc(c.id)}">تعديل</button>
+    <button class="btn outline-danger" data-act="del-case" data-id="${esc(c.id)}">حذف</button>
+  </div>`;
+}
+async function loadDetailPhotos(c){
+  const store = detailPhotos = {};
+  await Promise.all(STAGES.map(async s => {
+    if (!c.stages[s.k].n) return;
+    const arr = await getStagePhotos(c.id, s.k);
+    store[s.k] = arr;
+    const box = $('#dp-' + s.k); if (!box) return;
+    box.innerHTML = arr.map((src, i) => `<button class="ph view" data-act="view-photo" data-v="${s.k}:${i}"><img src="${src}" alt=""></button>`).join('');
+  }));
+}
+function openDetail(id){
+  const c = S.cases.find(x => x.id === id); if (!c) return;
+  openSheet(detailHTML(c));
+  $('#sheetRoot .sheet').style.setProperty('--c', subj(c.subject).color);
+  loadDetailPhotos(c);
+}
+
+/* ----- WhatsApp share ----- */
+function shareText(c, hide){
+  const sb = subj(c.subject), L = [];
+  L.push(`🦷 *${sb.id}* – ${sb.ar}`);
+  L.push(`*الإجراء:* ${c.procedure}`);
+  if (c.teeth && c.teeth.length) L.push(`*الأسنان:* ${sortTeeth(c.teeth).join(', ')}`);
+  if (!hide && c.patient) L.push(`*المريض:* ${c.patient}`);
+  if (!hide && c.fileNo) L.push(`*رقم الملف:* ${c.fileNo}`);
+  const ag = [c.age ? c.age + ' سنة' : '', GENDER[c.gender] || ''].filter(Boolean).join(' – ');
+  if (ag) L.push(`*العمر/النوع:* ${ag}`);
+  L.push(`*التاريخ:* ${fmtDate(c.date)}`);
+  if (c.doctor) L.push(`*الدكتور:* ${c.doctor}`);
+  L.push(`*الحالة:* ${STATUS[c.status].label}`);
+  STAGES.forEach((s, i) => {
+    const st = c.stages[s.k], notes = (st.notes || '').trim();
+    if (!notes && !st.n) return;
+    L.push('', `*${i + 1}) ${s.en}* (${s.ar})`, notes || '📷');
+  });
+  if (c.notes) L.push('', `*ملاحظات:* ${c.notes}`);
+  return L.join('\n');
+}
+function dataURLtoFile(d, name){
+  const parts = d.split(','), mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+  const bin = atob(parts[1]), u = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  return new File([u], name, {type: mime});
+}
+function canShareFiles(){
+  try { return !!(navigator.share && navigator.canShare && navigator.canShare({files: [new File(['x'], 'a.jpg', {type: 'image/jpeg'})]})); }
+  catch (e) { return false; }
+}
+function shareBox(id){
+  const c = S.cases.find(x => x.id === id); if (!c) return;
+  const photoTotal = STAGES.reduce((a, s) => a + (detailPhotos[s.k] || []).length, 0);
+  const files = photoTotal > 0 && canShareFiles();
+  const el = document.createElement('div'); el.className = 'confirm';
+  el.innerHTML = `<div class="scrim"></div><div class="cbox">
+    <h3>مشاركة على واتساب</h3>
+    <label class="chk"><input type="checkbox" id="shHide" checked> إخفاء اسم المريض ورقم الملف</label>
+    ${files ? '<label class="chk"><input type="checkbox" id="shPhotos" checked> إرفاق الصور (من قائمة المشاركة)</label>'
+      : (photoTotal > 0 ? '<p class="hint" style="margin:0 0 12px">إرسال الصور مباشرة غير مدعوم في هذا المتصفح، وسيُرسل النص فقط.</p>' : '')}
+    <div class="cstack">
+      <button class="btn wa" data-s="go">فتح واتساب</button>
+      <button class="btn" data-s="no">إلغاء</button>
+    </div>
+    ${files ? '<p class="hint">لو لم يظهر النص مع الصور في واتساب، ارفع علامة «إرفاق الصور» وأرسل النص وحده.</p>' : ''}
+  </div>`;
+  el.addEventListener('click', e => {
+    const b = e.target.closest('[data-s]'); if (!b) return;
+    if (b.dataset.s === 'go') {
+      const hide = el.querySelector('#shHide').checked;
+      const withPhotos = !!(el.querySelector('#shPhotos') && el.querySelector('#shPhotos').checked);
+      doShare(c, hide, withPhotos);
+    }
+    el.remove();
+  });
+  document.body.appendChild(el);
+}
+async function doShare(c, hide, withPhotos){
+  const text = shareText(c, hide);
+  if (withPhotos) {
+    const list = [];
+    STAGES.forEach(s => (detailPhotos[s.k] || []).forEach((src, i) => list.push(dataURLtoFile(src, `${c.subject}-${s.k}-${i + 1}.jpg`))));
+    if (list.length && navigator.canShare && navigator.canShare({files: list})) {
+      try { await navigator.share({files: list, text, title: c.procedure}); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+  }
+  const w = window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+  if (!w) {
+    try { await navigator.clipboard.writeText(text); toast('تعذّر فتح واتساب، تم نسخ النص. الصقه في المحادثة'); }
+    catch (e) { toast('تعذّر فتح واتساب من هذه الصفحة'); }
+  }
+}
+
+/* ----- Export ----- */
+function toRows(){
+  const head = ['التاريخ','المادة','الإجراء','الأسنان','المريض','رقم الملف','السن','النوع','الحالة','الدكتور', ...STAGES.map(s => s.en), 'ملاحظات'];
+  const body = sortCases(S.cases).map(c => [fmtDate(c.date), c.subject, c.procedure, sortTeeth(c.teeth || []).join(' '), c.patient, c.fileNo, c.age,
+    GENDER[c.gender] || '', (STATUS[c.status] || {}).label, c.doctor, ...STAGES.map(s => c.stages[s.k].notes), c.notes]);
+  return [head, ...body];
+}
+function exportCSV(){
+  if (!S.cases.length) { toast('لا توجد حالات للتصدير'); return; }
+  const csv = '\ufeff' + toRows().map(r => r.map(v => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"').join(',')).join('\r\n');
+  const blob = new Blob([csv], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'dental-cases.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+  toast('تم تجهيز الملف');
+}
+async function copyTable(){
+  if (!S.cases.length) { toast('لا توجد حالات للنسخ'); return; }
+  const txt = toRows().map(r => r.map(v => String(v == null ? '' : v).replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n');
+  try { await navigator.clipboard.writeText(txt); toast('تم النسخ، الصقه في Excel أو Sheets'); }
+  catch (e) {
+    const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('تم النسخ، الصقه في Excel أو Sheets'); } catch (_) { toast('تعذّر النسخ'); }
+    ta.remove();
+  }
+}
+
+/* ----- Backup / restore ----- */
+async function exportBackup(){
+  if (!S.cases.length) { toast('لا توجد حالات لحفظها'); return; }
+  toast('جارٍ تجهيز النسخة…');
+  const photos = {};
+  for (const c of S.cases) for (const s of STAGES) {
+    if (!c.stages[s.k].n) continue;
+    const arr = await getStagePhotos(c.id, s.k);
+    if (arr.length) photos[c.id + '|' + s.k] = arr;
+  }
+  const data = JSON.stringify({app: 'dental-case-log', v: 1, saved: new Date().toISOString(), cases: S.cases, photos});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([data], {type: 'application/json'}));
+  a.download = 'dental-backup-' + today() + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  toast('تم حفظ النسخة الاحتياطية');
+}
+async function importBackup(file){
+  if (!file) return;
+  try {
+    const d = JSON.parse(await file.text());
+    if (!d || !Array.isArray(d.cases)) throw new Error('bad file');
+    for (const raw of d.cases) {
+      if (!raw || !raw.id) continue;
+      const c = normalize(raw), i = S.cases.findIndex(x => x.id === c.id);
+      if (i >= 0) S.cases[i] = c; else S.cases.push(c);
+    }
+    for (const [key, arr] of Object.entries(d.photos || {})) {
+      const [id, k] = key.split('|');
+      if (Array.isArray(arr) && arr.length) await sSet('ph-' + id + '-' + k, arr);
+    }
+    await persistCases(); render(); toast('تم استرجاع النسخة');
+  } catch (e) { toast('الملف غير صالح'); }
+}
+
+/* ---------- Events ---------- */
+function updateList(){ const l = $('#caseList'); if (l) l.innerHTML = listHTML(); }
+
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-act]'); if (!el) return;
+  const a = el.dataset.act, v = el.dataset.v, id = el.dataset.id;
+  switch (a) {
+    case 'nav': S.view = v; render(); window.scrollTo(0, 0); break;
+    case 'open-subject': S.fSubject = v; S.fStatus = 'all'; S.q = ''; S.view = 'cases'; render(); window.scrollTo(0, 0); break;
+    case 'filter-subject': S.fSubject = v; render(); break;
+    case 'filter-status': S.fStatus = v; render(); break;
+    case 'new': openForm(null); break;
+    case 'new-in': openForm(null, v); break;
+    case 'open-case': openDetail(id); break;
+    case 'close-sheet': closeSheet(); break;
+    case 'edit-case': { const c = S.cases.find(x => x.id === id); closeSheet(); if (c) openForm(c); break; }
+    case 'share': shareBox(id); break;
+    case 'del-case': confirmBox('سيتم حذف هذه الحالة وصورها نهائيًا.', 'حذف', async () => {
+      S.cases = S.cases.filter(x => x.id !== id); await dropPhotos(id); await persistCases();
+      closeSheet(); render(); toast('تم حذف الحالة');
+    }); break;
+    case 'quick-status': {
+      const c = S.cases.find(x => x.id === id); if (!c) break;
+      c.status = v; await persistCases(); render();
+      const sh = $('#sheetRoot .sheet'); if (sh) { sh.innerHTML = detailHTML(c); loadDetailPhotos(c); }
+      toast('تم تحديث الحالة'); break;
+    }
+    case 'view-photo': {
+      const [k, i] = v.split(':'); const src = (detailPhotos[k] || [])[+i]; if (!src) break;
+      const d = document.createElement('div'); d.className = 'viewer'; d.setAttribute('data-act', 'close-viewer');
+      d.innerHTML = `<img src="${src}" alt="">`; document.body.appendChild(d); break;
+    }
+    case 'close-viewer': el.remove(); break;
+    case 'export': exportCSV(); break;
+    case 'copy': copyTable(); break;
+    case 'backup': exportBackup(); break;
+    case 'install': if (installEvt) { installEvt.prompt(); installEvt.userChoice.finally(() => { installEvt = null; render(); }); } break;
+    case 'wipe': confirmBox('سيتم حذف كل الحالات والصور من هذا الجهاز نهائيًا.', 'حذف الكل', async () => {
+      for (const c of S.cases) await dropPhotos(c.id);
+      S.cases = []; await persistCases(); render(); toast('تم حذف كل الحالات');
+    }); break;
+
+    /* form */
+    case 'f-subject':
+      draft.subject = v;
+      if (!draft.procedure || draft.procMode === 'preset') { draft.procedure = ''; draft.procMode = 'preset'; }
+      if (!draft.doctorTouched) { draft.doctor = lastDoctor(v); $('#f-doctor').value = draft.doctor; }
+      if (!draft.teeth.length) draft.dentition = v === 'Pedo' ? 'primary' : 'permanent';
+      renderSubj(); renderProcs(); renderTeeth(); applySubjectColor(); break;
+    case 'f-proc': draft.procMode = 'preset'; draft.procedure = v; renderProcs(); break;
+    case 'f-proc-other':
+      draft.procMode = 'other';
+      if (subj(draft.subject).procs.includes(draft.procedure)) draft.procedure = '';
+      renderProcs(); { const i = $('#f-procedure'); if (i) i.focus(); } break;
+    case 'dentition': draft.dentition = v; draft.quad = null; renderTeeth(); break;
+    case 'tooth-quad': draft.quad = v; renderTeeth(); break;
+    case 'tooth-toggle': {
+      const i = draft.teeth.indexOf(v);
+      if (i >= 0) draft.teeth.splice(i, 1); else draft.teeth.push(v);
+      renderTeeth(); break;
+    }
+    case 'f-gender': draft.gender = draft.gender === v ? '' : v; renderGender(); break;
+    case 'f-status': draft.status = v; renderStatus(); break;
+    case 'rm-photo': { const [k, i] = v.split(':'); draft.stages[k].photos.splice(+i, 1); renderStage(k); break; }
+    case 'save': saveDraft(); break;
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (draft && t.dataset) {
+    if (t.dataset.f) { draft[t.dataset.f] = t.value; if (t.dataset.f === 'doctor') draft.doctorTouched = true; }
+    if (t.dataset.st) { draft.stages[t.dataset.st].notes = t.value; updateInd(t.dataset.st); }
+  }
+  if (t.id === 'q') { S.q = t.value; updateList(); }
+});
+document.addEventListener('change', async e => {
+  const t = e.target;
+  if (t.id === 'restoreIn') { await importBackup(t.files && t.files[0]); t.value = ''; return; }
+  if (t.dataset && t.dataset.photo) { await addPhotos(t.dataset.photo, t.files); t.value = ''; }
+});
+
+/* ---------- Init ---------- */
+(async function init(){
+  render();
+  try { if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {}); } catch (e) {}
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  S.storageOK = await sSet('app-check', {t: 1});
+  const c = await sGet(KEY_CASES); if (Array.isArray(c)) S.cases = c.map(normalize);
+  S.ready = true; render();
+})();
+</script>
+</body>
+</html>
